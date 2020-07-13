@@ -2,6 +2,10 @@ package com.example.replacecolor;
 
 import android.content.Context;
 import android.os.Build;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 
 import androidx.annotation.RequiresApi;
@@ -22,6 +26,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -76,6 +82,7 @@ public class FileUtil {
             File cacheFile = new File(context.getCacheDir(), fileName);
             try {
                 InputStream inputStream = context.getAssets().open(fileName);
+                Log.e(TAG,inputStream.available()+" ");
                 try {
                     FileOutputStream outputStream = new FileOutputStream(cacheFile);
                     try {
@@ -93,8 +100,45 @@ public class FileUtil {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            Log.e(TAG,getSize(cacheFile)+" ");
             return cacheFile.getAbsolutePath();
         }
+
+        /**
+         * 获取大小
+         * @param file
+         * @return
+         */
+        public static String  getSize(File file)
+        {
+            double result=0;
+            String unit="字节";
+            long length = file.length();
+            if(length<1024)
+            {
+                result= length;
+            }
+            else if(length<1024*1024)
+            {
+                result=length/1024.0;
+                unit="KB";
+            }
+            else if(length<1024*1024*1024)
+            {
+                result=length/1024.0/1024;
+                unit="MB";
+            }
+            else
+            {
+                result=length/1024.0/1024/1024;
+                unit="GB";
+            }
+
+            BigDecimal bigDecimal=new BigDecimal(result+"",new MathContext(3));
+            return bigDecimal.doubleValue()+unit;
+
+        }
+
 
 
 
@@ -243,8 +287,8 @@ public class FileUtil {
         Log.e(TAG,"list files数量为"+files.length);
         if (files != null && files.length>0){
             for (File file : files){
-                Log.e(TAG,"名称为"+file.getName());
-                Log.e(TAG,"file.getPath() 是： "+file.getPath());
+//                Log.e(TAG,"名称为"+file.getName());
+//                Log.e(TAG,"file.getPath() 是： "+file.getPath());
                     if (file.isDirectory()){
                     replaceXml(file.getPath(),inColor,outColor);
                 }
@@ -277,12 +321,43 @@ public class FileUtil {
         }
 
     /**
+     * 复制文件
+     * @param inPath
+     * @param outPath
+
+     * @throws IOException
+     */
+    public static void copyFile(String inPath,String outPath) throws IOException {
+        File f = new File(inPath);
+        File new_f = new File(outPath);
+        if (new_f.exists())
+            new_f.delete();
+        InputStream in = new FileInputStream(inPath);
+        OutputStream out = new FileOutputStream(outPath);
+//        BufferedReader in = new BufferedReader(new FileReader(f));
+//        PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(new_f)));
+//        String line;
+//        while((line = in.readLine())!= null){
+//            out.println(line);
+//        }
+        byte[] buf = new byte[1024];
+        int len;
+        while (0 < (len = in.read(buf))) {
+            out.write(buf, 0, len);
+        }
+        Log.e(TAG,"源文件大小为   "+getSize(f)+"。。。。。新文件大小为："+getSize(new_f));
+        in.close();
+        out.close();
+    }
+
+    /**
      * 寻找xml文件、统计输出
      * @param dic
      * @return
      * @throws ZipException
      * @throws IOException
      */
+        @RequiresApi(api = Build.VERSION_CODES.N)
         public static ArrayList<File> getNamesByXml(File dic) throws ZipException, IOException {
             if(!dic.exists()){
                 Log.e(TAG,"目录不存在");
@@ -408,6 +483,16 @@ public class FileUtil {
                 zipout.closeEntry();
             }
         }
+        //压缩内部文件
+        public static void zipInter(String src, String dest) throws IOException {
+            zip(src, dest+"000");
+            File sf = new File(dest+"000");
+            File df = new File(dest);
+            if (df.isDirectory()){
+                deleteDic(df);
+            }
+            sf.renameTo(new File(dest));
+        }
 
         //第二种实现
         public static void zip(String src, String dest) throws IOException {
@@ -488,6 +573,18 @@ public class FileUtil {
                 }
             }
         }
+        public static void deleteDic(File dic){
+            File[] files = dic.listFiles();
+            for (File file : files){
+                if (file.isDirectory()){
+                    deleteDic(file);
+                }
+                else {
+                    file.delete();
+                }
+            }
+            dic.delete();
+        }
 
         @SuppressWarnings("unchecked")
         public static void unzip(String zipFileName, String outputDirectory)
@@ -498,6 +595,9 @@ public class FileUtil {
                 Enumeration e = zipFile.entries();
                 ZipEntry zipEntry = null;
                 File dest = new File(outputDirectory);
+                if (dest.exists()){
+                    deleteDic(dest);
+                }
                 dest.mkdirs();
                 while (e.hasMoreElements()) {
                     zipEntry = (ZipEntry) e.nextElement();
