@@ -13,13 +13,16 @@ import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,10 +44,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private final static String TAG = "MainActivity000";
     private static final String OUT_DIR = "/Huawei/Themes/";
     private static final String OutPath = Environment.getExternalStorageDirectory().getAbsolutePath() + OUT_DIR;
-    private static final String OutPath_new = Environment.getDataDirectory().getAbsolutePath() + OUT_DIR;
+//    private static final String OutPath_new = Environment.getDataDirectory().getAbsolutePath() + OUT_DIR;
     private static final String OPEN_THEME = "com.huawei.android.thememanager";
     private static final String FILE_MANAGER = OutPath;
     private static final int FILE_SELECT_CODE = 0;
+    private ArrayList<String> strs;
 
 
 
@@ -74,8 +78,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //            e.printStackTrace();
 //        }
 //        }
-        //选择文件
-        chooseFile(FILE_MANAGER,this);
     }
 
     /**
@@ -85,8 +87,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void chooseFile(String str,Context context){
         File file = new File(str);
         Intent intent= new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setDataAndType(Uri.fromFile(file),"*/*");
-//        intent.setType("*/*");
+//        intent.setDataAndType(Uri.fromFile(file),"*/*");
+        intent.setType("*/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         try {
             startActivityForResult(Intent.createChooser(intent, "选择文件"), FILE_SELECT_CODE);
@@ -101,8 +103,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param resultCode
      * @param data
      */
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        Uri uri;
         // TODO Auto-generated method stub
         if (resultCode != Activity.RESULT_OK) {
             Log.e(TAG, "onActivityResult() error, resultCode: " + resultCode);
@@ -110,18 +114,56 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             return;
         }
         if (requestCode == FILE_SELECT_CODE) {
-            Uri uri = data.getData();
-            Log.e(TAG, "---------------------->" + uri.getPath());
+            uri = data.getData();
+            Log.e(TAG, "---------------------->" + uri.getPath().toString()+"----------"+getRealPathFromURI(uri));
+            InPath = getRealPathFromURI(uri);
+            //判断是否是hwt文件、提示正在解析、或者无法操作
+            File file = new File(InPath);
+            if (file.getName().endsWith("hwt")){
+                //开始解析
+                Toast.makeText(this, "您选择了" + file.getName() + " 主题文件，正在解析颜色信息…………", Toast.LENGTH_LONG).show();
+                try {
+                    getRes();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (PackageManager.NameNotFoundException e) {
+                    e.printStackTrace();
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
+            else {
+                Toast.makeText(this, "抱歉，您当前选择的不是 hwt 主题文件，请重新选择！", Toast.LENGTH_SHORT).show();
+            }
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
+
+
+    /**
+     * 由uri获取path
+     * @param contentUri
+     * @return
+     */
+    public String getRealPathFromURI(Uri contentUri) {
+        String res = null;
+        String[] proj = { MediaStore.Images.Media.DATA };
+        Cursor cursor = getContentResolver().query(contentUri, proj, null, null, null);
+        if(cursor.moveToFirst()){;
+            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+            res = cursor.getString(column_index);
+        }
+        cursor.close();
+        return res;
+    }
+
 
     //获取资源
     @RequiresApi(api = Build.VERSION_CODES.N)
     public void getRes() throws IOException, PackageManager.NameNotFoundException, ClassNotFoundException {
         Log.e(TAG,"here-------------------------");
         //复制assets文件
-        FileUtil.copyFile(InPath,OutPath + (new File(InPath)).getName());
+//        FileUtil.copyFile(InPath,OutPath + (new File(InPath)).getName());
         //解压缩 到000
         FileUtil.unzip(InPath,  InPath+"000");
         //打印文件信息
@@ -158,17 +200,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
         //获取并存储 key值
-        ArrayList<String> strs = new ArrayList<>();
+        strs = new ArrayList<>();
         for (Map.Entry<String,Integer> entry : list){
             strs.add(entry.getKey());
 //            Log.e(TAG,"我是 "+ entry.getKey()+"   我出现了" + entry.getKey()+" 次！");
         }
-        //替换颜色
-        FileUtil.replaceXml(InPath+"000",strs.get(0),"#ff0000");
         //根据key值排名 前5进行索引
         for (int j=0 ; j<5 ; j++){
             Log.e(TAG,"我是 "+ strs.get(j) + "  ，我出现了 " + FileUtil.colorMap.get(strs.get(j)) + "次");
         }
+        //
+    }
+
+    /**
+     * 替换颜色
+     */
+    public void replaceColorMul() throws IOException, PackageManager.NameNotFoundException, ClassNotFoundException {
+        //替换颜色
+        FileUtil.replaceXml(InPath+"000",strs.get(0),"#ff0000");
         //开始压缩
         Log.e(TAG,"压缩------------------------------------------------");
         String RealOutPath = OutPath + (new File(InPath)).getName().replace(".hwt","_new.hwt");
@@ -176,7 +225,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         File[] fileList = (new File(InPath+"000")).listFiles();
         for (File f : fileList){
             if (!f.getName().equals("wallpaper") && !f.getName().equals("preview") &&
-                            !f.getName().equals("fonts") && !f.getName().equals("unlock")   && !f.getName().equals("description.xml") ) {
+                    !f.getName().equals("fonts") && !f.getName().equals("unlock")   && !f.getName().equals("description.xml") ) {
                 Log.e(TAG,f.getName());
                 FileUtil.zipInter(f.getAbsolutePath(), f.getAbsolutePath());
             }
@@ -187,7 +236,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //        FileUtil.copyFile(InPath,RealOutPath_new);
         Log.e(TAG,"成功压缩哈哈哈------outpath: "+ RealOutPath + "-----------------------------------------");
         //打开主题商店
-        openApp(OPEN_THEME);
+        try {
+            openApp(OPEN_THEME);
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -224,13 +279,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /**
      * 申请权限
      */
+    @RequiresApi(api = Build.VERSION_CODES.N)
     public void requestPermission() throws PackageManager.NameNotFoundException, IOException, ClassNotFoundException {
         if (ContextCompat.checkSelfPermission(this,
             Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
         } else {
-            getRes();
+//            getRes();
         }
     }
 
@@ -238,19 +294,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
 
+    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void onClick(View view) {
         switch (view.getId()){
             case R.id.start_Bt:
-                try {
-                    getRes();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (PackageManager.NameNotFoundException e) {
-                    e.printStackTrace();
-                } catch (ClassNotFoundException e) {
-                    e.printStackTrace();
-                }
+                //选择文件
+                chooseFile(FILE_MANAGER,this);
+//                try {
+//                    getRes();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                } catch (PackageManager.NameNotFoundException e) {
+//                    e.printStackTrace();
+//                } catch (ClassNotFoundException e) {
+//                    e.printStackTrace();
+//                }
                 break;
         }
     }
