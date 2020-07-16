@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.example.replacecolor.enterActivity"
+    android:background="@drawable/bg"
+    android:layout_marginTop="-20dp">
+
+    <Button
+        android:id="@+id/open_Bt"
+        android:layout_width="200dp"
+        android:layout_height="80dp"
+        android:text="打开文件管理器\n并选择文件！"
+        android:layout_centerInParent="true"/>
+    <Button
+        android:id="@+id/get_Bt"
+        android:layout_below="@+id/open_Bt"
+        android:layout_width="200dp"
+        android:layout_height="80dp"
+        android:layout_centerInParent="true"
+        android:text="从Theme文件夹\n获取主题文件！" />
+
+</RelativeLayout>

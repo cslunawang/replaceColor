@@ -14,13 +14,15 @@
             android:layout_weight="1"
             android:layout_height="match_parent"
             android:background="#333333"/>
-        <Button
-            android:id="@+id/old_bt"
+        <TextView
+            android:id="@+id/old_text"
             android:layout_width="0dp"
             android:layout_weight="2"
-            android:layout_height="wrap_content"
-            android:text="#333333"
             android:textSize="16sp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginLeft="10dp"
+            android:text="#333333"
             android:textColor="@color/black"/>
     </LinearLayout>
 

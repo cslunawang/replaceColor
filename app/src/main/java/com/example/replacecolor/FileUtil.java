@@ -1,6 +1,7 @@
 package com.example.replacecolor;
 
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
@@ -32,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
@@ -80,6 +82,9 @@ public class FileUtil {
 
         public static String getAssetsCacheFile(Context context, String fileName)   {
             File cacheFile = new File(context.getCacheDir(), fileName);
+            if (cacheFile.exists()){
+                return cacheFile.getAbsolutePath();
+            }
             try {
                 InputStream inputStream = context.getAssets().open(fileName);
                 Log.e(TAG,inputStream.available()+" ");
@@ -278,6 +283,43 @@ public class FileUtil {
             return names;
         }
 
+    /**
+     * 传入map修改
+     * @param inPath
+     * @throws ZipException
+     * @throws IOException
+     */
+    public static void replaceXml(String inPath,HashMap<String,String> changeMap) throws ZipException, IOException {
+        File dic = new File(inPath);
+        if(!dic.exists()){
+            Log.e(TAG,"目录不存在");
+        }
+        File files[] = dic.listFiles();
+        Log.e(TAG,"list files数量为"+files.length);
+        if (files != null && files.length>0){
+            for (File file : files){
+//                Log.e(TAG,"名称为"+file.getName());
+//                Log.e(TAG,"file.getPath() 是： "+file.getPath());
+                if (file.isDirectory()){
+                    replaceXml(file.getPath(),changeMap);
+                }
+                else{
+                    if (file.getName().endsWith("xml")) {
+                        replaceColor(file.getPath(),inPath+"000",changeMap);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 传入单个颜色
+     * @param inPath
+     * @param inColor
+     * @param outColor
+     * @throws ZipException
+     * @throws IOException
+     */
     public static void replaceXml(String inPath,String inColor,String outColor) throws ZipException, IOException {
         File dic = new File(inPath);
         if(!dic.exists()){
@@ -301,6 +343,42 @@ public class FileUtil {
         }
     }
 
+    /**
+     * 替换多个
+     * @param inPath
+     * @param outPath
+     * @param changeMap
+     * @throws IOException
+     */
+    public static void replaceColor(String inPath,String outPath,HashMap<String,String> changeMap) throws IOException {
+        File f = new File(inPath);
+        File new_f = new File(outPath);
+        BufferedReader in = new BufferedReader(new FileReader(f));
+        PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(new_f)));
+        String line;
+        while((line = in.readLine())!= null){
+            for (Map.Entry<String,String> entry: changeMap.entrySet()){
+               line = line.replace(entry.getKey(),entry.getValue());
+            }
+            out.println(line);
+
+        }
+        in.close();
+        out.close();
+        //删除原来、修改名字
+        if (f.exists()){
+            f.delete();
+        }
+        new_f.renameTo(f);
+    }
+    /**
+     * 修改单个
+     * @param inPath
+     * @param outPath
+     * @param inColor
+     * @param outColor
+     * @throws IOException
+     */
         public static void replaceColor(String inPath,String outPath,String inColor,String outColor) throws IOException {
             File f = new File(inPath);
             File new_f = new File(outPath);
@@ -519,6 +597,46 @@ public class FileUtil {
                 }
             } catch (IOException ex) {
                 ex.printStackTrace();
+            } finally {
+                // 关闭输出流
+                if (out != null) {
+                    try {
+                        out.close();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        }
+        public static void zip(String src, String dest, MainActivity.ChangeColorItem changeColorItem) throws IOException {
+            // 提供了一个数据项压缩成一个ZIP归档输出流
+            ZipOutputStream out = null;
+            try {
+
+                //DirTraversal.makeRootDirectory(dest);
+                //File outFile = DirTraversal.getFilePath(dest,"cache.zip");
+
+                File outFile = new File(dest);// 源文件或者目录
+                File fileOrDirectory = new File(src);// 压缩文件路径
+                out = new ZipOutputStream(new FileOutputStream(outFile));
+                // 如果此文件是一个文件，否则为false。
+                if (fileOrDirectory.isFile()) {
+                    zipFileOrDirectory(out, fileOrDirectory, "");
+                } else {
+                    // 返回一个文件或空阵列。
+                    File[] entries = fileOrDirectory.listFiles();
+                    for (int i = 0; i < entries.length; i++) {
+                        // 递归压缩，更新curPaths
+                        zipFileOrDirectory(out, entries[i], "");
+                    }
+                }
+                changeColorItem.change();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            } catch (PackageManager.NameNotFoundException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
             } finally {
                 // 关闭输出流
                 if (out != null) {
