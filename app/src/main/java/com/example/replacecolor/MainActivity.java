@@ -292,14 +292,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void change() throws IOException, PackageManager.NameNotFoundException, ClassNotFoundException {
                 //执行替换操作
-//                FileUtil.replaceXml(InPath+"000",changeMap);
+                FileUtil.replaceXml(InPath+"000",changeMap);
                 //试试单个修改：可是为什么还是不行呢？之前明明已经成功了啊呜呜呜
-                ArrayList<String> keys = new ArrayList();
-                for (Map.Entry<String,String> mapEntry: changeMap.entrySet()){
-                    keys.add(mapEntry.getKey());
-                }
-                Log.e(TAG,keys.get(0)+"-------------------"+changeMap.get(keys.get(0)));
-                FileUtil.replaceXml(InPath+"000",keys.get(0),changeMap.get(keys.get(0)));
+//                ArrayList<String> keys = new ArrayList();
+//                for (Map.Entry<String,String> mapEntry: changeMap.entrySet()){
+//                    keys.add(mapEntry.getKey());
+//                }
+//                Log.e(TAG,keys.get(0)+"-------------------"+changeMap.get(keys.get(0)));
+//                FileUtil.replaceXml(InPath+"000",keys.get(0),changeMap.get(keys.get(0)));
                 Log.e(TAG,"恭喜您，替换成功！");
                 //解压缩 并 打开主题商店
                 rar();

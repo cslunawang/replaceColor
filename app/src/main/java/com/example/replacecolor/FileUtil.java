@@ -608,7 +608,7 @@ public class FileUtil {
                 }
             }
         }
-        public static void zip(String src, String dest, MainActivity.ChangeColorItem changeColorItem) throws IOException {
+        public static void zip(String src, String dest, MainActivity.ChangeColorItem changeColorItem) throws IOException, PackageManager.NameNotFoundException, ClassNotFoundException {
             // 提供了一个数据项压缩成一个ZIP归档输出流
             ZipOutputStream out = null;
             try {
@@ -630,13 +630,8 @@ public class FileUtil {
                         zipFileOrDirectory(out, entries[i], "");
                     }
                 }
-                changeColorItem.change();
             } catch (IOException ex) {
                 ex.printStackTrace();
-            } catch (PackageManager.NameNotFoundException e) {
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
             } finally {
                 // 关闭输出流
                 if (out != null) {
@@ -647,6 +642,7 @@ public class FileUtil {
                     }
                 }
             }
+            changeColorItem.change();
         }
 
         private static void zipFileOrDirectory(ZipOutputStream out,
